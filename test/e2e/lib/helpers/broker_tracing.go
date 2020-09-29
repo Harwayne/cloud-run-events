@@ -18,6 +18,7 @@ package helpers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func VerifyTrace(t *testing.T, testTree TestSpanTree, projectID string, traceID 
 		t.Error(err)
 		return
 	}
-	timeout := time.After(4 * time.Minute)
+	timeout := time.After(2 * time.Minute)
 	for {
 		err = tryVerifyBrokerTrace(ctx, nil, testTree, client, projectID, traceID)
 		if err == nil {
@@ -63,21 +64,28 @@ func tryVerifyBrokerTrace(ctx context.Context, t *testing.T, testTree TestSpanTr
 		return err
 	}
 	if len(testTree.MatchesSubtree(t, tree)) == 0 {
-		return fmt.Errorf("expected subtree %v, got %v", testTree, tree)
+		return fmt.Errorf("expected subtree %+v, got %+v", testTree, tree)
 	}
 	return nil
 }
 
 // SpanTree is the tree of Spans representation of a Trace.
+//
+// The JSON names of the fields are weird because we want a specific order when pretty printing
+// JSON. The JSON will be printed in alphabetical order, so we are imposing a certain order by
+// prefixing the keys with a specific letter. The letter has no mean other than ordering.
 type SpanTree struct {
-	Span     *cloudtrace.TraceSpan
-	Children []SpanTree
+	Span     *cloudtrace.TraceSpan `json:"c_span"`
+	Children []SpanTree            `json:"z_children,omitempty"`
 }
 
+// The JSON names of the fields are weird because we want a specific order when pretty printing
+// JSON. The JSON will be printed in alphabetical order, so we are imposing a certain order by
+// prefixing the keys with a specific letter. The letter has no mean other than ordering.
 type SpanMatcher struct {
-	Name   string
-	Kind   *cloudtrace.TraceSpan_SpanKind
-	Labels map[string]string
+	Name   string                         `json:"a_Name,omitempty"`
+	Kind   *cloudtrace.TraceSpan_SpanKind `json:"b_Kind,omitempty"`
+	Labels map[string]string              `json:"c_Labels,omitempty"`
 }
 
 func (m *SpanMatcher) MatchesSpan(span *cloudtrace.TraceSpan) error {
@@ -101,10 +109,19 @@ func (m *SpanMatcher) MatchesSpan(span *cloudtrace.TraceSpan) error {
 }
 
 // TestSpanTree is the expected version of SpanTree used for assertions in testing.
+//
+// The JSON names of the fields are weird because we want a specific order when pretty printing
+// JSON. The JSON will be printed in alphabetical order, so we are imposing a certain order by
+// prefixing the keys with a specific letter. The letter has no mean other than ordering.
 type TestSpanTree struct {
-	Name     string
-	Span     *SpanMatcher
-	Children []TestSpanTree
+	Note     string         `json:"a_Note,omitempty"`
+	Span     *SpanMatcher   `json:"c_Span"`
+	Children []TestSpanTree `json:"z_Children,omitempty"`
+}
+
+func (tt TestSpanTree) String() string {
+	b, _ := json.MarshalIndent(tt, "", "  ")
+	return string(b)
 }
 
 // GetTraceTree converts a set slice of spans into a SpanTree.
@@ -158,7 +175,7 @@ func mkTree(children map[uint64][]*cloudtrace.TraceSpan, root *cloudtrace.TraceS
 func (tt TestSpanTree) MatchesSubtree(t *testing.T, actual *SpanTree) (matches [][]SpanTree) {
 	if t != nil {
 		t.Helper()
-		t.Logf("attempting to match test tree %v against %v", tt, actual)
+		t.Logf("attempting to match test tree %+v against %+v", tt, actual)
 	}
 	if err := tt.Span.MatchesSpan(actual.Span); err == nil {
 		if t != nil {
@@ -235,6 +252,65 @@ func BrokerTestTree(namespace string, brokerName string, trigger string, respTri
 			},
 			{
 				Span: triggerSpan(namespace, respTrigger),
+			},
+		},
+	}
+}
+
+func BrokerKSVCTestTree2(namespace, brokerName, oobTrigger, mutatorTrigger, respTrigger string) TestSpanTree {
+	response := TestSpanTree{
+		Span: ingressSpan(namespace, brokerName),
+		Children: []TestSpanTree{
+			{
+				Span: triggerSpan(namespace, mutatorTrigger),
+			},
+			{
+				Span: triggerSpan(namespace, respTrigger),
+			},
+		},
+	}
+	return TestSpanTree{
+		// Initial event ingress
+		Span: ingressSpan(namespace, brokerName),
+		Children: []TestSpanTree{
+			{
+				// Transform trigger and response
+				Span: triggerSpan(namespace, oobTrigger),
+				Children: []TestSpanTree{
+					response,
+				},
+			},
+			{
+				Span: triggerSpan(namespace, oobTrigger),
+			},
+			{
+				Span: triggerSpan(namespace, respTrigger),
+			},
+		},
+	}
+}
+func BrokerKSVCTestTree(namespace, brokerName, oobTrigger, mutatorTrigger, respTrigger string) TestSpanTree {
+	_ = TestSpanTree{
+		Span:     ingressSpan(namespace, brokerName),
+		Children: []TestSpanTree{},
+	}
+	return TestSpanTree{
+		// Initial event ingress
+		Span: ingressSpan(namespace, brokerName),
+		Children: []TestSpanTree{
+			{
+				// Transform trigger and response
+				Span: triggerSpan(namespace, oobTrigger),
+				//	Children: []TestSpanTree{
+				//		{
+				//			Span: ingressSpan(namespace, brokerName),
+				//			Children: []TestSpanTree{
+				//				{
+				//					Span: triggerSpan(namespace, mutatorTrigger),
+				//				},
+				//			},
+				//		},
+				//	},
 			},
 		},
 	}

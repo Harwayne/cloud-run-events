@@ -274,12 +274,13 @@ func BrokerEventTransformationKSVCTracingTestHelper(client *lib.Client, projectI
 	oobSenderTriggerFilter := eventingtestresources.WithAttributesTriggerFilterV1Beta1(
 		eventingv1beta1.TriggerAnyFilter, eventingv1beta1.TriggerAnyFilter,
 		map[string]interface{}{"type": lib.E2EDummyEventType})
-	oobSenderTrigger := createTriggerWithKServiceSubscriber(client, brokerName, oobSenderKSVCName, oobSenderTriggerFilter)
+	oobSenderTriggerName := "trigger-broker-" + brokerName + "-oob-sender"
+	oobSenderTrigger := createTriggerWithKServiceSubscriberWithName(client, brokerName, oobSenderKSVCName, oobSenderTriggerFilter, oobSenderTriggerName)
 	mutatorTriggerFilter := eventingtestresources.WithAttributesTriggerFilterV1Beta1(
 		eventingv1beta1.TriggerAnyFilter, eventingv1beta1.TriggerAnyFilter,
 		map[string]interface{}{"type": lib.E2EOutOfBandEventType})
-	// mutatorTrigger :=
-	createTriggerWithKServiceSubscriber(client, brokerName, mutatorKSVCName, mutatorTriggerFilter)
+	mutatorTriggerName := "trigger-broker-" + brokerName + "-mutator"
+	mutatorTrigger := createTriggerWithKServiceSubscriberWithName(client, brokerName, mutatorKSVCName, mutatorTriggerFilter, mutatorTriggerName)
 
 	// Create a Trigger with the target Service subscriber.
 	respTriggerFilter := eventingtestresources.WithAttributesTriggerFilterV1Beta1(
@@ -315,7 +316,7 @@ func BrokerEventTransformationKSVCTracingTestHelper(client *lib.Client, projectI
 		client.T.Error("resp event didn't hit the target pod")
 		client.T.Failed()
 	}
-	testTree := BrokerTestTree(client.Namespace, brokerName, oobSenderTrigger.Name, respTrigger.Name)
+	testTree := BrokerKSVCTestTree(client.Namespace, brokerName, oobSenderTrigger.Name, mutatorTrigger.Name, respTrigger.Name)
 	VerifyTrace(client.T, testTree, projectID, senderOutput.TraceID)
 }
 
@@ -643,9 +644,15 @@ func createFirstNErrsReceiver(client *lib.Client, firstNErrs int) string {
 func createTriggerWithKServiceSubscriber(client *lib.Client,
 	brokerName, kserviceName string,
 	triggerFilter eventingtestresources.TriggerOptionV1Beta1) *eventingv1beta1.Trigger {
+	triggerName := "trigger-broker-" + brokerName
+	return createTriggerWithKServiceSubscriberWithName(client, brokerName, kserviceName, triggerFilter, triggerName)
+}
+
+func createTriggerWithKServiceSubscriberWithName(client *lib.Client,
+	brokerName, kserviceName string,
+	triggerFilter eventingtestresources.TriggerOptionV1Beta1, triggerName string) *eventingv1beta1.Trigger {
 	client.T.Helper()
 	// Please refer to the graph in the file to check what dummy trigger is used for.
-	triggerName := "trigger-broker-" + brokerName
 	return client.Core.CreateTriggerOrFailV1Beta1(
 		triggerName,
 		eventingtestresources.WithBrokerV1Beta1(brokerName),
