@@ -25,6 +25,10 @@ import (
 	nethttp "net/http"
 	"sync"
 
+	"go.uber.org/zap"
+	"knative.dev/eventing/pkg/tracing"
+	tracingconfig "knative.dev/pkg/tracing/config"
+
 	"go.opencensus.io/plugin/ochttp"
 	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
@@ -61,7 +65,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+	tracing.SetupStaticPublishing(logger.Sugar(), "localhost", &tracingconfig.Config{
+		Backend:    tracingconfig.Stackdriver,
+		SampleRate: 1.0,
+	})
 	r := &Receiver{
 		client:    client,
 		errsCount: 0,
