@@ -22,9 +22,9 @@ spec:
   schedule: "* * * * *"
   sink:
     ref:
-      apiVersion: v1
+      apiVersion: serving.knative.dev/v1
       kind: Service
-      name: event-display
+      name: oob
 
 #    # If running in GKE, we will ask the metadata server, change this if required.
 #  project: MY_PROJECT

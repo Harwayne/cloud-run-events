@@ -294,6 +294,9 @@ func BrokerEventTransformationKSVCTracingTestHelper(client *lib.Client, projectI
 
 	// Just to make sure all resources are ready.
 	time.Sleep(resources.WaitBrokercellTime)
+	if err := waitForFileExists(3 * time.Minute); err != nil {
+		client.T.Fatalf("Failed waiting for file existence: %v", err)
+	}
 
 	// Create a sender Job to send the event with retry.
 	senderJob := resources.SenderJob(senderName, []v1.EnvVar{{
@@ -318,6 +321,24 @@ func BrokerEventTransformationKSVCTracingTestHelper(client *lib.Client, projectI
 	}
 	testTree := BrokerKSVCTestTree(client.Namespace, brokerName, oobSenderTrigger.Name, mutatorTrigger.Name, respTrigger.Name)
 	VerifyTrace(client.T, testTree, projectID, senderOutput.TraceID)
+}
+
+func waitForFileExists(timeout time.Duration) error {
+	fileName := "/tmp/testGo"
+	t := time.After(timeout)
+	for {
+		select {
+		case <-t:
+			return fmt.Errorf("timeout waiting for %q to exist", fileName)
+		default:
+		}
+		if _, err := os.Stat(fileName); err == nil {
+			return nil
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("error stating file %q: %w", fileName, err)
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func BrokerEventTransformationKSVCTracingTestHelper2(client *lib.Client, projectID string, brokerURL url.URL, brokerName string) {

@@ -18,24 +18,28 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	nethttp "net/http"
 	"sync"
+
+	"go.opencensus.io/plugin/ochttp"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+
+	"github.com/cloudevents/sdk-go/v2/binding"
+	"github.com/cloudevents/sdk-go/v2/binding/transformer"
+
+	"go.opencensus.io/trace"
 
 	"github.com/kelseyhightower/envconfig"
 
-	"github.com/cloudevents/sdk-go/v2/event"
-	"github.com/cloudevents/sdk-go/v2/protocol"
 	cehttp "github.com/cloudevents/sdk-go/v2/protocol/http"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/google/knative-gcp/pkg/kncloudevents"
 	"github.com/google/knative-gcp/test/e2e/lib"
-)
-
-const (
-	firstNErrsEnvVar = "FIRST_N_ERRS"
 )
 
 type envConfig struct {
@@ -62,37 +66,70 @@ func main() {
 		client:    client,
 		errsCount: 0,
 	}
-	if err := r.client.StartReceiver(context.Background(), r.Receive); err != nil {
+	h := ochttp.Handler{
+		Handler:     r,
+		Propagation: tracecontextb3.B3Egress,
+	}
+	if err := nethttp.ListenAndServe(":8080", &h); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (r *Receiver) Receive(ctx context.Context, event cloudevents.Event) (*event.Event, protocol.Result) {
-
+func (r *Receiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
+	event, err := toEvent(request.Context(), request)
+	if err != nil {
+		response.WriteHeader(http.StatusBadRequest)
+		log.Printf("Error getting the event from the request: %v", err)
+		return
+	}
+	span := trace.FromContext(request.Context())
+	log.Printf("Incoming span: %+v", span)
 	// Check if the received event is the dummy event sent by sender pod.
 	// If it is, send back a response CloudEvent.
 	if event.ID() == lib.E2EDummyEventID {
-		event = cloudevents.NewEvent(cloudevents.VersionV1)
-		event.SetID(lib.E2EDummyRespEventID)
-		event.SetType(lib.E2EDummyRespEventType)
-		event.SetSource(lib.E2EDummyRespEventSource)
-		event.SetData(cloudevents.ApplicationJSON, `{"source": "receiver!"}`)
-		err := r.sendEvent(event)
+		oobEvent := cloudevents.NewEvent(cloudevents.VersionV1)
+		oobEvent.SetID(lib.E2EDummyRespEventID)
+		oobEvent.SetType(lib.E2EDummyRespEventType)
+		oobEvent.SetSource(lib.E2EDummyRespEventSource)
+		oobEvent.SetData(cloudevents.ApplicationJSON, `{"source": "oob_sender!"}`)
+		err := r.sendEvent(request.Context(), oobEvent)
 		if err != nil {
 			// Ksvc seems to auto retry 5xx. So use 4xx for predictability.
-			return nil, cehttp.NewResult(http.StatusFailedDependency, "Unable to send cloud event")
+			response.WriteHeader(http.StatusFailedDependency)
+			return
 		}
-		return nil, cehttp.NewResult(http.StatusAccepted, "OK")
+		response.WriteHeader(http.StatusAccepted)
 	} else {
-		return nil, cehttp.NewResult(http.StatusForbidden, "Forbidden")
+		response.WriteHeader(http.StatusForbidden)
 	}
 }
 
-func (r *Receiver) sendEvent(event cloudevents.Event) error {
-	ctx := cloudevents.WithEncodingBinary(context.Background())
+func (r *Receiver) sendEvent(ctx context.Context, event cloudevents.Event) error {
+	ctx = cloudevents.WithEncodingBinary(ctx)
+	span := trace.FromContext(ctx)
+	log.Printf("Just before going out span: %+v", span)
 	result := r.client.Send(ctx, event)
 	if cloudevents.IsACK(result) {
 		return nil
 	}
 	return fmt.Errorf("event send did not ACK: %w", result)
+}
+
+// toEvent converts an http request to an event.
+func toEvent(ctx context.Context, request *nethttp.Request) (*cloudevents.Event, error) {
+	message := cehttp.NewMessageFromHttpRequest(request)
+	defer func() {
+		if err := message.Finish(nil); err != nil {
+			log.Println("Failed to close message")
+		}
+	}()
+	// If encoding is unknown, the message is not an event.
+	if message.ReadEncoding() == binding.EncodingUnknown {
+		return nil, errors.New("unknown encoding. Not a cloud event? ")
+	}
+	event, err := binding.ToEvent(request.Context(), message, transformer.AddTimeNow)
+	if err != nil {
+		return nil, err
+	}
+	return event, nil
 }

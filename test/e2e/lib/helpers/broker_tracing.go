@@ -64,7 +64,11 @@ func tryVerifyBrokerTrace(ctx context.Context, t *testing.T, testTree TestSpanTr
 		return err
 	}
 	if len(testTree.MatchesSubtree(t, tree)) == 0 {
-		return fmt.Errorf("expected subtree %+v, got %+v", testTree, tree)
+		jsonTree, err := json.Marshal(tree)
+		if err != nil {
+			return fmt.Errorf("error json printing the tree: %+v", tree)
+		}
+		return fmt.Errorf("expected subtree %+v, got %+v", testTree, jsonTree)
 	}
 	return nil
 }
@@ -290,27 +294,54 @@ func BrokerKSVCTestTree2(namespace, brokerName, oobTrigger, mutatorTrigger, resp
 	}
 }
 func BrokerKSVCTestTree(namespace, brokerName, oobTrigger, mutatorTrigger, respTrigger string) TestSpanTree {
-	_ = TestSpanTree{
-		Span:     ingressSpan(namespace, brokerName),
-		Children: []TestSpanTree{},
+	// senderJob -> broker -> oobSenderKSVC -out-of-band-> broker -> mutatorKSVC -reply-> broker -> targetJob
+	// Note that senderJob, oobSenderKSVC, and mutatorKSVC
+	mutatedEventThroughBroker := TestSpanTree{
+		Span: ingressSpan(namespace, brokerName),
+		Children: []TestSpanTree{
+			{
+				Span: triggerSpan(namespace, oobTrigger),
+			},
+			{
+				Span: triggerSpan(namespace, mutatorTrigger),
+			},
+			{
+				Span: triggerSpan(namespace, respTrigger),
+			},
+		},
+	}
+	oobEventThroughBroker := TestSpanTree{
+		Span: ingressSpan(namespace, brokerName),
+		Children: []TestSpanTree{
+			{
+				Span: triggerSpan(namespace, oobTrigger),
+			},
+			{
+				Span: triggerSpan(namespace, mutatorTrigger),
+				Children: []TestSpanTree{
+					mutatedEventThroughBroker,
+				},
+			},
+			{
+				Span: triggerSpan(namespace, respTrigger),
+			},
+		},
 	}
 	return TestSpanTree{
 		// Initial event ingress
 		Span: ingressSpan(namespace, brokerName),
 		Children: []TestSpanTree{
 			{
-				// Transform trigger and response
 				Span: triggerSpan(namespace, oobTrigger),
-				//	Children: []TestSpanTree{
-				//		{
-				//			Span: ingressSpan(namespace, brokerName),
-				//			Children: []TestSpanTree{
-				//				{
-				//					Span: triggerSpan(namespace, mutatorTrigger),
-				//				},
-				//			},
-				//		},
-				//	},
+				Children: []TestSpanTree{
+					oobEventThroughBroker,
+				},
+			},
+			{
+				Span: triggerSpan(namespace, mutatorTrigger),
+			},
+			{
+				Span: triggerSpan(namespace, respTrigger),
 			},
 		},
 	}
