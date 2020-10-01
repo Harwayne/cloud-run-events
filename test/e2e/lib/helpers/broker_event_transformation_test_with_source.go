@@ -24,6 +24,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"strings"
+	"testing"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -294,7 +297,7 @@ func BrokerEventTransformationKSVCTracingTestHelper(client *lib.Client, projectI
 
 	// Just to make sure all resources are ready.
 	time.Sleep(resources.WaitBrokercellTime)
-	if err := waitForFileExists(3 * time.Minute); err != nil {
+	if err := waitForFileExists(client.T, 3*time.Minute); err != nil {
 		client.T.Fatalf("Failed waiting for file existence: %v", err)
 	}
 
@@ -323,21 +326,34 @@ func BrokerEventTransformationKSVCTracingTestHelper(client *lib.Client, projectI
 	VerifyTrace(client.T, testTree, projectID, senderOutput.TraceID)
 }
 
-func waitForFileExists(timeout time.Duration) error {
+func waitForFileExists(t *testing.T, timeout time.Duration) error {
 	fileName := "/tmp/testGo"
-	t := time.After(timeout)
+	notification(t, fmt.Sprintf("Waiting for the file '%s' to exist", fileName))
+	tc := time.After(timeout)
 	for {
 		select {
-		case <-t:
+		case <-tc:
 			return fmt.Errorf("timeout waiting for %q to exist", fileName)
 		default:
 		}
 		if _, err := os.Stat(fileName); err == nil {
+			notification(t, "File found, continuing")
 			return nil
 		} else if !os.IsNotExist(err) {
 			return fmt.Errorf("error stating file %q: %w", fileName, err)
 		}
 		time.Sleep(1 * time.Second)
+	}
+}
+
+func notification(t *testing.T, msg string) {
+	if strings.Contains(msg, "\"") {
+		t.Fatalf("Cannot include a double quote character: %s", msg)
+	}
+	cmd := exec.Command("osascript", "-e", fmt.Sprintf("display notification \"%s\" with title \"E2E Tests\"", msg))
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Error generating notification: %v, %v", err, string(o))
 	}
 }
 

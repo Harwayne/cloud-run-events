@@ -94,14 +94,14 @@ func gcpbrokerTracingTestImpl(t *testing.T, authConfig lib.AuthConfig, testHelpe
 	if err != nil {
 		client.T.Fatalf("Unable to set the config-tracing ConfigMap: %v", err)
 	}
-	//err = client.Core.Kube.UpdateConfigMap(ctx, "knative-serving", "config-tracing", map[string]string{
-	//	"backend":                "stackdriver",
-	//	"stackdriver-project-id": projectID,
-	//	"sample-rate":            "1.0",
-	//})
-	//if err != nil {
-	//	client.T.Fatalf("Unable to set the config-tracing ConfigMap: %v", err)
-	//}
+	err = client.Core.Kube.UpdateConfigMap(ctx, "knative-serving", "config-tracing", map[string]string{
+		"backend":                "stackdriver",
+		"stackdriver-project-id": projectID,
+		"sample-rate":            "0.0",
+	})
+	if err != nil {
+		client.T.Fatalf("Unable to set the config-tracing ConfigMap: %v", err)
+	}
 
 	brokerURL, brokerName := createGCPBroker(client)
 	testHelper(client, projectID, brokerURL, brokerName)
