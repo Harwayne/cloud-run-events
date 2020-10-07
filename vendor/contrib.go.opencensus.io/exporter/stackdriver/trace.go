@@ -136,6 +136,7 @@ func (e *traceExporter) pushTraceSpans(ctx context.Context, node *commonpb.Node,
 		res = e.o.MapResource(resourcepbToResource(r))
 	}
 
+	log.Printf("About to send the following Spans to StackDriver: %v", spans)
 	for _, span := range spans {
 		protoSpans = append(protoSpans, protoFromSpanData(span, e.projectID, res))
 	}

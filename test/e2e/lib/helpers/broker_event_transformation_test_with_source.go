@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	goruntime "runtime"
 	"strings"
 	"testing"
 	"time"
@@ -347,6 +348,10 @@ func waitForFileExists(t *testing.T, timeout time.Duration) error {
 }
 
 func notification(t *testing.T, msg string) {
+	if goruntime.GOOS != "darwin" {
+		t.Logf("Don't know how to notify for OS %q", goruntime.GOOS)
+		return
+	}
 	if strings.Contains(msg, "\"") {
 		t.Fatalf("Cannot include a double quote character: %s", msg)
 	}

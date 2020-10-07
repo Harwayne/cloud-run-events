@@ -84,7 +84,7 @@ func gcpbrokerTracingTestImpl(t *testing.T, authConfig lib.AuthConfig, testHelpe
 	projectID := lib.GetEnvOrFail(t, lib.ProwProjectKey)
 	ctx := context.Background()
 	client := lib.Setup(ctx, t, true, authConfig.WorkloadIdentity)
-	defer lib.TearDown(ctx, client)
+	//defer lib.TearDown(ctx, client)
 
 	// Setup tracing for both the Knative-GCP Broker and Knative Services.
 	err := client.Core.Kube.UpdateConfigMap(ctx, "cloud-run-events", "config-tracing", map[string]string{

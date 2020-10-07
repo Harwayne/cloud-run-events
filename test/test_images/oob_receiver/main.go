@@ -25,12 +25,12 @@ import (
 	nethttp "net/http"
 	"sync"
 
+	"go.opencensus.io/plugin/ochttp"
+	"knative.dev/pkg/tracing/propagation/tracecontextb3"
+
 	"go.uber.org/zap"
 	"knative.dev/eventing/pkg/tracing"
 	tracingconfig "knative.dev/pkg/tracing/config"
-
-	"go.opencensus.io/plugin/ochttp"
-	"knative.dev/pkg/tracing/propagation/tracecontextb3"
 
 	"github.com/cloudevents/sdk-go/v2/binding"
 	"github.com/cloudevents/sdk-go/v2/binding/transformer"
@@ -69,10 +69,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tracing.SetupStaticPublishing(logger.Sugar(), "localhost", &tracingconfig.Config{
+	err = tracing.SetupStaticPublishing(logger.Sugar(), "localhost", &tracingconfig.Config{
 		Backend:    tracingconfig.Stackdriver,
 		SampleRate: 1.0,
 	})
+	if err != nil {
+		panic(err)
+	}
 	r := &Receiver{
 		client:    client,
 		errsCount: 0,
@@ -87,7 +90,7 @@ func main() {
 }
 
 func (r *Receiver) ServeHTTP(response nethttp.ResponseWriter, request *nethttp.Request) {
-	event, err := toEvent(request.Context(), request)
+	event, err := toEvent(request)
 	if err != nil {
 		response.WriteHeader(http.StatusBadRequest)
 		log.Printf("Error getting the event from the request: %v", err)
@@ -127,7 +130,7 @@ func (r *Receiver) sendEvent(ctx context.Context, event cloudevents.Event) error
 }
 
 // toEvent converts an http request to an event.
-func toEvent(ctx context.Context, request *nethttp.Request) (*cloudevents.Event, error) {
+func toEvent(request *nethttp.Request) (*cloudevents.Event, error) {
 	message := cehttp.NewMessageFromHttpRequest(request)
 	defer func() {
 		if err := message.Finish(nil); err != nil {
