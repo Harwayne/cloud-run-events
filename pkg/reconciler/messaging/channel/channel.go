@@ -39,7 +39,6 @@ import (
 	"github.com/google/knative-gcp/pkg/apis/duck"
 	"github.com/google/knative-gcp/pkg/apis/messaging/v1beta1"
 	channelreconciler "github.com/google/knative-gcp/pkg/client/injection/reconciler/messaging/v1beta1/channel"
-	inteventslisters "github.com/google/knative-gcp/pkg/client/listers/intevents/v1beta1"
 	listers "github.com/google/knative-gcp/pkg/client/listers/messaging/v1beta1"
 	"github.com/google/knative-gcp/pkg/reconciler"
 	"github.com/google/knative-gcp/pkg/reconciler/identity"
@@ -64,7 +63,6 @@ type Reconciler struct {
 	*identity.Identity
 	// listers index properties about resources
 	channelLister listers.ChannelLister
-	topicLister   inteventslisters.TopicLister
 	brokerLister  gcplisters.BrokerLister
 }
 

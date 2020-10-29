@@ -27,7 +27,7 @@ import (
 
 	"github.com/google/knative-gcp/pkg/apis/configs/gcpauth"
 	"github.com/google/knative-gcp/pkg/apis/messaging/v1beta1"
-	pullsubscriptioninformer "github.com/google/knative-gcp/pkg/client/injection/informers/intevents/v1beta1/pullsubscription"
+	brokerinformers "github.com/google/knative-gcp/pkg/client/injection/informers/broker/v1beta1/broker"
 	topicinformer "github.com/google/knative-gcp/pkg/client/injection/informers/intevents/v1beta1/topic"
 	channelinformer "github.com/google/knative-gcp/pkg/client/injection/informers/messaging/v1beta1/channel"
 	channelreconciler "github.com/google/knative-gcp/pkg/client/injection/reconciler/messaging/v1beta1/channel"
@@ -64,14 +64,14 @@ func newController(
 	channelInformer := channelinformer.Get(ctx)
 
 	topicInformer := topicinformer.Get(ctx)
-	pullSubscriptionInformer := pullsubscriptioninformer.Get(ctx)
 	serviceAccountInformer := serviceaccountinformers.Get(ctx)
+	brokerInformer := brokerinformers.Get(ctx)
 
 	r := &Reconciler{
 		Base:          reconciler.NewBase(ctx, controllerAgentName, cmw),
 		Identity:      identity.NewIdentity(ctx, ipm, gcpas),
 		channelLister: channelInformer.Lister(),
-		topicLister:   topicInformer.Lister(),
+		brokerLister:  brokerInformer.Lister(),
 	}
 	impl := channelreconciler.NewImpl(ctx, r)
 
@@ -85,7 +85,7 @@ func newController(
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	pullSubscriptionInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterControllerGK(channelGK),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
