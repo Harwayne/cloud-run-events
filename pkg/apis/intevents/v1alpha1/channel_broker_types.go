@@ -17,10 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/google/knative-gcp/pkg/apis/broker/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
+	eventingv1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
@@ -65,15 +66,12 @@ var (
 
 // ChannelBrokerSpec defines the desired state of a Brokercell.
 type ChannelBrokerSpec struct {
-	v1.BrokerSpec
+	eventingv1beta1.BrokerSpec `json:",inline"`
 }
 
 // ChannelBrokerStatus represents the current state of a ChannelBroker.
 type ChannelBrokerStatus struct {
-	// inherits duck/v1 Status, which currently provides:
-	// * ObservedGeneration - the 'Generation' of the Service that was last processed by the controller.
-	// * Conditions - the latest available observations of a resource's current state.
-	duckv1.Status `json:",inline"`
+	v1beta1.BrokerStatus `json:",inline"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
