@@ -21,3 +21,5 @@ package v1alpha1
 type BrokerCellExpansion interface{}
 
 type ChannelBrokerExpansion interface{}
+
+type ChannelTriggerExpansion interface{}

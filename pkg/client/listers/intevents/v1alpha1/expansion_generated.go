@@ -33,3 +33,11 @@ type ChannelBrokerListerExpansion interface{}
 // ChannelBrokerNamespaceListerExpansion allows custom methods to be added to
 // ChannelBrokerNamespaceLister.
 type ChannelBrokerNamespaceListerExpansion interface{}
+
+// ChannelTriggerListerExpansion allows custom methods to be added to
+// ChannelTriggerLister.
+type ChannelTriggerListerExpansion interface{}
+
+// ChannelTriggerNamespaceListerExpansion allows custom methods to be added to
+// ChannelTriggerNamespaceLister.
+type ChannelTriggerNamespaceListerExpansion interface{}

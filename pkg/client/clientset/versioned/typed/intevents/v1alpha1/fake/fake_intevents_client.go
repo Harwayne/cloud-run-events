@@ -36,6 +36,10 @@ func (c *FakeInternalV1alpha1) ChannelBrokers(namespace string) v1alpha1.Channel
 	return &FakeChannelBrokers{c, namespace}
 }
 
+func (c *FakeInternalV1alpha1) ChannelTriggers(namespace string) v1alpha1.ChannelTriggerInterface {
+	return &FakeChannelTriggers{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeInternalV1alpha1) RESTClient() rest.Interface {

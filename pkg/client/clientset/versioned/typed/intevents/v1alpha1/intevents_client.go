@@ -28,6 +28,7 @@ type InternalV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BrokerCellsGetter
 	ChannelBrokersGetter
+	ChannelTriggersGetter
 }
 
 // InternalV1alpha1Client is used to interact with features provided by the internal.events.cloud.google.com group.
@@ -41,6 +42,10 @@ func (c *InternalV1alpha1Client) BrokerCells(namespace string) BrokerCellInterfa
 
 func (c *InternalV1alpha1Client) ChannelBrokers(namespace string) ChannelBrokerInterface {
 	return newChannelBrokers(c, namespace)
+}
+
+func (c *InternalV1alpha1Client) ChannelTriggers(namespace string) ChannelTriggerInterface {
+	return newChannelTriggers(c, namespace)
 }
 
 // NewForConfig creates a new InternalV1alpha1Client for the given config.

@@ -28,6 +28,8 @@ type Interface interface {
 	BrokerCells() BrokerCellInformer
 	// ChannelBrokers returns a ChannelBrokerInformer.
 	ChannelBrokers() ChannelBrokerInformer
+	// ChannelTriggers returns a ChannelTriggerInformer.
+	ChannelTriggers() ChannelTriggerInformer
 }
 
 type version struct {
@@ -49,4 +51,9 @@ func (v *version) BrokerCells() BrokerCellInformer {
 // ChannelBrokers returns a ChannelBrokerInformer.
 func (v *version) ChannelBrokers() ChannelBrokerInformer {
 	return &channelBrokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ChannelTriggers returns a ChannelTriggerInformer.
+func (v *version) ChannelTriggers() ChannelTriggerInformer {
+	return &channelTriggerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
