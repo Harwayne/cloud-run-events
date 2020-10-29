@@ -25,3 +25,11 @@ type BrokerCellListerExpansion interface{}
 // BrokerCellNamespaceListerExpansion allows custom methods to be added to
 // BrokerCellNamespaceLister.
 type BrokerCellNamespaceListerExpansion interface{}
+
+// ChannelBrokerListerExpansion allows custom methods to be added to
+// ChannelBrokerLister.
+type ChannelBrokerListerExpansion interface{}
+
+// ChannelBrokerNamespaceListerExpansion allows custom methods to be added to
+// ChannelBrokerNamespaceLister.
+type ChannelBrokerNamespaceListerExpansion interface{}

@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// BrokerCells returns a BrokerCellInformer.
 	BrokerCells() BrokerCellInformer
+	// ChannelBrokers returns a ChannelBrokerInformer.
+	ChannelBrokers() ChannelBrokerInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // BrokerCells returns a BrokerCellInformer.
 func (v *version) BrokerCells() BrokerCellInformer {
 	return &brokerCellInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ChannelBrokers returns a ChannelBrokerInformer.
+func (v *version) ChannelBrokers() ChannelBrokerInformer {
+	return &channelBrokerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
