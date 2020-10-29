@@ -17,7 +17,7 @@
 package v1beta1
 
 import (
-	"github.com/google/knative-gcp/pkg/apis/intevents/v1beta1"
+	"github.com/google/knative-gcp/pkg/apis/broker/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -64,40 +64,40 @@ func (cs *ChannelStatus) MarkTopicReady() {
 	channelCondSet.Manage(cs).MarkTrue(ChannelConditionTopicReady)
 }
 
-func (cs *ChannelStatus) PropagateTopicStatus(ts *v1beta1.TopicStatus) {
+func (cs *ChannelStatus) PropagateBrokerStatus(ts *v1beta1.BrokerStatus) {
 	tc := ts.GetTopLevelCondition()
 	if tc == nil {
-		cs.MarkTopicNotConfigured()
+		cs.MarkBrokerNotConfigured()
 		return
 	}
 
 	switch {
 	case tc.Status == corev1.ConditionUnknown:
-		cs.MarkTopicUnknown(tc.Reason, tc.Message)
+		cs.MarkBrokerUnknown(tc.Reason, tc.Message)
 	case tc.Status == corev1.ConditionTrue:
 		cs.MarkTopicReady()
 	case tc.Status == corev1.ConditionFalse:
-		cs.MarkTopicFailed(tc.Reason, tc.Message)
+		cs.MarkBrokerFailed(tc.Reason, tc.Message)
 	default:
-		cs.MarkTopicUnknown("TopicUnknown", "The status of Topic is invalid: %v", tc.Status)
+		cs.MarkBrokerUnknown("BrokerUnknown", "The status of Broker is invalid: %v", tc.Status)
 	}
 }
 
 // MarkTopicFailed sets the condition that signals there is not a topic for this
 // Channel. This could be because of an error or the Channel is being deleted.
-func (cs *ChannelStatus) MarkTopicFailed(reason, messageFormat string, messageA ...interface{}) {
+func (cs *ChannelStatus) MarkBrokerFailed(reason, messageFormat string, messageA ...interface{}) {
 	channelCondSet.Manage(cs).MarkFalse(ChannelConditionTopicReady, reason, messageFormat, messageA...)
 }
 
-func (cs *ChannelStatus) MarkTopicNotOwned(messageFormat string, messageA ...interface{}) {
+func (cs *ChannelStatus) MarkBrokerNotOwned(messageFormat string, messageA ...interface{}) {
 	channelCondSet.Manage(cs).MarkFalse(ChannelConditionTopicReady, "NotOwned", messageFormat, messageA...)
 }
 
-func (cs *ChannelStatus) MarkTopicNotConfigured() {
+func (cs *ChannelStatus) MarkBrokerNotConfigured() {
 	channelCondSet.Manage(cs).MarkUnknown(ChannelConditionTopicReady,
-		"TopicNotConfigured", "Topic has not yet been reconciled")
+		"BrokerNotConfigured", "Broker has not yet been reconciled")
 }
 
-func (cs *ChannelStatus) MarkTopicUnknown(reason, messageFormat string, messageA ...interface{}) {
+func (cs *ChannelStatus) MarkBrokerUnknown(reason, messageFormat string, messageA ...interface{}) {
 	channelCondSet.Manage(cs).MarkUnknown(ChannelConditionTopicReady, reason, messageFormat, messageA...)
 }

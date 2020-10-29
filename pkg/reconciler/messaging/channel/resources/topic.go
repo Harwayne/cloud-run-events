@@ -17,47 +17,38 @@ limitations under the License.
 package resources
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	brokerv1beta1 "github.com/google/knative-gcp/pkg/apis/broker/v1beta1"
+	gcpv1beta1 "github.com/google/knative-gcp/pkg/apis/broker/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "knative.dev/eventing/pkg/apis/eventing/v1"
 
 	"knative.dev/pkg/kmeta"
-
-	duckv1alpha1 "github.com/google/knative-gcp/pkg/apis/duck/v1beta1"
-	"github.com/google/knative-gcp/pkg/apis/intevents/v1beta1"
 )
 
 // TopicArgs are the arguments needed to create a Channel Topic.
 // Every field is required.
-type TopicArgs struct {
-	Owner              kmeta.OwnerRefable
-	Name               string
-	Project            string
-	Topic              string
-	ServiceAccount     string
-	ServiceAccountName string
-	Secret             *corev1.SecretKeySelector
-	Labels             map[string]string
-	Annotations        map[string]string
+type BrokerArgs struct {
+	Owner       kmeta.OwnerRefable
+	Name        string
+	Labels      map[string]string
+	Annotations map[string]string
 }
 
 // MakeInvoker generates (but does not insert into K8s) the Topic for Channels.
-func MakeTopic(args *TopicArgs) *v1beta1.Topic {
-	return &v1beta1.Topic{
+func MakeBroker(args *BrokerArgs) *gcpv1beta1.Broker {
+	if args.Annotations == nil {
+		args.Annotations = make(map[string]string)
+	}
+	// It must be a Google Broker.
+	args.Annotations[v1.BrokerClassAnnotationKey] = brokerv1beta1.BrokerClass
+
+	return &gcpv1beta1.Broker{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       args.Owner.GetObjectMeta().GetNamespace(),
 			Name:            args.Name,
 			Labels:          args.Labels,
 			Annotations:     args.Annotations,
 			OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(args.Owner)},
-		},
-		Spec: v1beta1.TopicSpec{
-			IdentitySpec: duckv1alpha1.IdentitySpec{
-				ServiceAccountName: args.ServiceAccountName,
-			},
-			Secret:            args.Secret,
-			Project:           args.Project,
-			Topic:             args.Topic,
-			PropagationPolicy: v1beta1.TopicPolicyCreateDelete,
 		},
 	}
 }

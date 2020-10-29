@@ -17,73 +17,28 @@ limitations under the License.
 package resources
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	gcpv1beta1 "github.com/google/knative-gcp/pkg/apis/broker/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	duckv1beta1 "knative.dev/eventing/pkg/apis/duck/v1beta1"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
+	v1beta1 "knative.dev/eventing/pkg/apis/eventing/v1beta1"
+	pkgduckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/kmeta"
-
-	gcpduckv1beta1 "github.com/google/knative-gcp/pkg/apis/duck/v1beta1"
-	"github.com/google/knative-gcp/pkg/apis/intevents/v1beta1"
 )
 
 // PullSubscriptionArgs are the arguments needed to create a Channel Subscriber.
 // Every field is required.
-type PullSubscriptionArgs struct {
-	Owner              kmeta.OwnerRefable
-	Name               string
-	Project            string
-	Topic              string
-	ServiceAccount     string
-	ServiceAccountName string
-	Secret             *corev1.SecretKeySelector
-	Labels             map[string]string
-	Annotations        map[string]string
-	Subscriber         duckv1beta1.SubscriberSpec
+type TriggerArgs struct {
+	Owner       kmeta.OwnerRefable
+	Name        string
+	Labels      map[string]string
+	Annotations map[string]string
+	Subscriber  duckv1beta1.SubscriberSpec
 }
 
 // MakePullSubscription generates (but does not insert into K8s) the
 // PullSubscription for Channels.
-func MakePullSubscription(args *PullSubscriptionArgs) *v1beta1.PullSubscription {
-
-	spec := v1beta1.PullSubscriptionSpec{
-		PubSubSpec: gcpduckv1beta1.PubSubSpec{
-			SourceSpec: duckv1.SourceSpec{},
-			IdentitySpec: gcpduckv1beta1.IdentitySpec{
-				ServiceAccountName: args.ServiceAccountName,
-			},
-			Secret:  args.Secret,
-			Project: args.Project,
-		},
-		Topic: args.Topic,
-	}
-
-	reply := args.Subscriber.ReplyURI
-	subscriber := args.Subscriber.SubscriberURI
-
-	// If subscriber and reply is used, map:
-	//   pull.transformer to sub.subscriber
-	//   pull.sink to sub.reply
-	// Otherwise, pull.sink has to be used, but subscriptions allow for just
-	// reply or just subscriber. So set the single non-nil uri to to pull.sink.
-	if subscriber != nil && reply != nil {
-		spec.Transformer = &duckv1.Destination{
-			URI: subscriber,
-		}
-		spec.Sink = duckv1.Destination{
-			URI: reply,
-		}
-	} else if subscriber != nil {
-		spec.Sink = duckv1.Destination{
-			URI: subscriber,
-		}
-	} else if reply != nil {
-		spec.Sink = duckv1.Destination{
-			URI: reply,
-		}
-	}
-
-	return &v1beta1.PullSubscription{
+func MakeTrigger(args *TriggerArgs) *gcpv1beta1.Trigger {
+	return &gcpv1beta1.Trigger{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       args.Owner.GetObjectMeta().GetNamespace(),
 			Name:            args.Name,
@@ -91,6 +46,14 @@ func MakePullSubscription(args *PullSubscriptionArgs) *v1beta1.PullSubscription 
 			Annotations:     args.Annotations,
 			OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(args.Owner)},
 		},
-		Spec: spec,
+		Spec: v1beta1.TriggerSpec{
+			Broker: args.Owner.GetObjectMeta().GetName(),
+			// No filter, everything goes through.
+			Filter: nil,
+			Subscriber: pkgduckv1.Destination{
+				URI: args.Subscriber.SubscriberURI,
+			},
+		},
+		// TODO: Reply!
 	}
 }
