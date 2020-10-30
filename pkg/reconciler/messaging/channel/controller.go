@@ -28,7 +28,7 @@ import (
 	"github.com/google/knative-gcp/pkg/apis/configs/gcpauth"
 	"github.com/google/knative-gcp/pkg/apis/messaging/v1beta1"
 	brokerinformers "github.com/google/knative-gcp/pkg/client/injection/informers/broker/v1beta1/broker"
-	topicinformer "github.com/google/knative-gcp/pkg/client/injection/informers/intevents/v1beta1/topic"
+	triggerinformers "github.com/google/knative-gcp/pkg/client/injection/informers/broker/v1beta1/trigger"
 	channelinformer "github.com/google/knative-gcp/pkg/client/injection/informers/messaging/v1beta1/channel"
 	channelreconciler "github.com/google/knative-gcp/pkg/client/injection/reconciler/messaging/v1beta1/channel"
 	"github.com/google/knative-gcp/pkg/reconciler"
@@ -63,9 +63,9 @@ func newController(
 ) *controller.Impl {
 	channelInformer := channelinformer.Get(ctx)
 
-	topicInformer := topicinformer.Get(ctx)
 	serviceAccountInformer := serviceaccountinformers.Get(ctx)
 	brokerInformer := brokerinformers.Get(ctx)
+	triggerInformer := triggerinformers.Get(ctx)
 
 	r := &Reconciler{
 		Base:          reconciler.NewBase(ctx, controllerAgentName, cmw),
@@ -80,12 +80,14 @@ func newController(
 
 	channelGK := v1beta1.Kind("Channel")
 
-	topicInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	// The Channel itself is mapped to Brokers.
+	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterControllerGK(channelGK),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})
 
-	brokerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	// The Subscriptions are mapped to Triggers.
+	triggerInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controller.FilterControllerGK(channelGK),
 		Handler:    controller.HandleAll(impl.EnqueueControllerOf),
 	})

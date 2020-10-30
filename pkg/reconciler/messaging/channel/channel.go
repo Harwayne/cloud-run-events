@@ -75,13 +75,6 @@ func (r *Reconciler) ReconcileKind(ctx context.Context, channel *v1beta1.Channel
 	channel.Status.InitializeConditions()
 	channel.Status.ObservedGeneration = channel.Generation
 
-	// If ServiceAccountName is provided, reconcile workload identity.
-	if channel.Spec.ServiceAccountName != "" {
-		if _, err := r.Identity.ReconcileWorkloadIdentity(ctx, channel.Spec.Project, channel); err != nil {
-			return pkgreconciler.NewEvent(corev1.EventTypeWarning, workloadIdentityFailed, "Failed to reconcile Channel workload identity: %s", err.Error())
-		}
-	}
-
 	// 1. Create the Broker.
 	broker, err := r.reconcileBroker(ctx, channel)
 	if err != nil {
@@ -158,6 +151,7 @@ func (r *Reconciler) syncSubscribers(ctx context.Context, channel *v1beta1.Chann
 		t := resources.MakeTrigger(&resources.TriggerArgs{
 			Owner:       channel,
 			Name:        genName,
+			BrokerName:  brokerName(channel),
 			Labels:      resources.GetPullSubscriptionLabels(controllerAgentName, channel.Name, genName, string(channel.UID)),
 			Annotations: resources.GetPullSubscriptionAnnotations(channel.Name, clusterName),
 			Subscriber:  s,
@@ -278,9 +272,13 @@ func (r *Reconciler) syncSubscribersStatus(ctx context.Context, channel *v1beta1
 	return nil
 }
 
+func brokerName(channel *v1beta1.Channel) string {
+	return fmt.Sprintf("chan-%s", channel.Name) // resources.GenerateBrokerName(channel)
+}
+
 func (r *Reconciler) reconcileBroker(ctx context.Context, channel *v1beta1.Channel) (*gcpv1beta1.Broker, error) {
 	clusterName := channel.GetAnnotations()[duck.ClusterNameAnnotation]
-	name := fmt.Sprintf("chan-%s", channel.Name) // resources.GenerateBrokerName(channel)
+	name := brokerName(channel)
 	b := resources.MakeBroker(&resources.BrokerArgs{
 		Owner:       channel,
 		Name:        name,

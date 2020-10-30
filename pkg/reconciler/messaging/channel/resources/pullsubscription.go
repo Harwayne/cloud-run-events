@@ -30,6 +30,7 @@ import (
 type TriggerArgs struct {
 	Owner       kmeta.OwnerRefable
 	Name        string
+	BrokerName  string
 	Labels      map[string]string
 	Annotations map[string]string
 	Subscriber  duckv1beta1.SubscriberSpec
@@ -47,7 +48,7 @@ func MakeTrigger(args *TriggerArgs) *gcpv1beta1.Trigger {
 			OwnerReferences: []metav1.OwnerReference{*kmeta.NewControllerRef(args.Owner)},
 		},
 		Spec: v1beta1.TriggerSpec{
-			Broker: args.Owner.GetObjectMeta().GetName(),
+			Broker: args.BrokerName,
 			// No filter, everything goes through.
 			Filter: nil,
 			Subscriber: pkgduckv1.Destination{
