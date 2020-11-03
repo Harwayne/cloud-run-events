@@ -39,7 +39,7 @@ func (r *Reconciler) ReconcileTopic(ctx context.Context, id string, topicConfig 
 	exists, err := topic.Exists(ctx)
 	if err != nil {
 		logger.Error("Failed to verify Pub/Sub topic exists", zap.Error(err))
-		updater.MarkTopicUnknown("TopicVerificationFailed", "Failed to verify Pub/Sub topic exists: %v", err)
+		updater.MarkTopicUnknown("TopicVerificationFailed", "Failed to verify Pub/Sub topic exists: %s", err)
 		return nil, err
 	}
 	if exists {
