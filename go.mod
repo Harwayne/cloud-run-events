@@ -16,26 +16,25 @@ require (
 	github.com/google/wire v0.4.0
 	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/mitchellh/go-homedir v1.1.0
-	github.com/pelletier/go-toml v1.8.0
-	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/rickb777/date v1.13.0
 	github.com/stretchr/testify v1.5.1
 	github.com/wavesoftware/go-ensure v1.0.0
 	go.opencensus.io v0.22.5
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	google.golang.org/api v0.34.0
 	google.golang.org/genproto v0.0.0-20200929141702-51c3e5b607fe
 	google.golang.org/grpc v1.33.1
 	google.golang.org/protobuf v1.25.0
-	k8s.io/api v0.18.8
-	k8s.io/apimachinery v0.18.8
+	k8s.io/api v0.18.12
+	k8s.io/apimachinery v0.18.12
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
-	knative.dev/eventing v0.18.1-0.20201029043934-af98d5579864
-	knative.dev/pkg v0.0.0-20201029122234-6d905b3f84a6
-	knative.dev/serving v0.18.1-0.20201029100934-fbc2b6640b56
+	knative.dev/eventing v0.19.1-0.20201124020934-518010ed7378
+	knative.dev/hack v0.0.0-20201120192952-353db687ec5b
+	knative.dev/pkg v0.0.0-20201123172958-fea72c1c8e2f
+	knative.dev/serving v0.19.1-0.20201123211758-4c3d26230f23
 	sigs.k8s.io/yaml v1.2.0
 )
 

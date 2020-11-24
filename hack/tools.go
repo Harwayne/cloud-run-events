@@ -20,12 +20,15 @@ limitations under the License.
 package tools
 
 import (
+	_ "knative.dev/hack"
+
 	_ "knative.dev/pkg/configmap/hash-gen"
 	_ "knative.dev/pkg/hack"
 
 	_ "knative.dev/eventing/test/test_images/event-sender"
 	_ "knative.dev/eventing/test/test_images/recordevents"
 
+	_ "knative.dev/eventing/test/test_images/wathola-fetcher"
 	_ "knative.dev/eventing/test/test_images/wathola-forwarder"
 	_ "knative.dev/eventing/test/test_images/wathola-receiver"
 	_ "knative.dev/eventing/test/test_images/wathola-sender"
@@ -33,7 +36,6 @@ import (
 	_ "knative.dev/eventing/test/test_images/performance"
 	_ "knative.dev/pkg/apiextensions/storageversion/cmd/migrate"
 	_ "knative.dev/pkg/test/mako/stub-sidecar"
-	_ "knative.dev/pkg/testutils/clustermanager/perf-tests"
 
 	_ "github.com/google/wire/cmd/wire"
 )

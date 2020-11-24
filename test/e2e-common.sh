@@ -31,7 +31,7 @@ readonly VENDOR_EVENTING_TEST_IMAGES="vendor/knative.dev/eventing/test/test_imag
 # Constants used for authentication setup for GCP Broker if it's not running on Prow.
 readonly APP_ENGINE_REGION="us-central"
 
-readonly CONFIG_WARMUP_GCP_BROKER="test/test_configs/warmup-broker.yaml"
+export CONFIG_WARMUP_GCP_BROKER="test/test_configs/warmup-broker.yaml"
 
 # Setup Knative GCP.
 function knative_setup() {
@@ -74,16 +74,122 @@ function storage_setup() {
   fi
 }
 
+# Create resources required for Pub/Sub Editor setup.
+function pubsub_setup() {
+  local auth_mode=${1}
+
+  if [ "${auth_mode}" == "secret" ]; then
+    if (( ! IS_PROW )); then
+      # When not running on Prow we need to set up a service account for PubSub.
+      echo "Set up ServiceAccount for Pub/Sub Editor"
+      init_pubsub_service_account "${E2E_PROJECT_ID}" "${PUBSUB_SERVICE_ACCOUNT_NON_PROW}"
+      enable_monitoring "${E2E_PROJECT_ID}" "${PUBSUB_SERVICE_ACCOUNT_NON_PROW}"
+      gcloud iam service-accounts keys create "${PUBSUB_SERVICE_ACCOUNT_KEY_TEMP}" \
+        --iam-account="${PUBSUB_SERVICE_ACCOUNT_NON_PROW}"@"${E2E_PROJECT_ID}".iam.gserviceaccount.com
+    else
+      delete_topics_and_subscriptions
+    fi
+    kubectl -n ${E2E_TEST_NAMESPACE} create secret generic "${PUBSUB_SECRET_NAME}" --from-file=key.json="${PUBSUB_SERVICE_ACCOUNT_KEY_TEMP}"
+  elif [ "${auth_mode}" == "workload_identity" ]; then
+    if (( ! IS_PROW )); then
+      # When not running on Prow we need to set up a service account for PubSub.
+      echo "Set up ServiceAccount for Pub/Sub Editor"
+      init_pubsub_service_account "${E2E_PROJECT_ID}" "${PUBSUB_SERVICE_ACCOUNT_NON_PROW}"
+      enable_monitoring "${E2E_PROJECT_ID}" "${PUBSUB_SERVICE_ACCOUNT_NON_PROW}"
+    else
+      delete_topics_and_subscriptions
+    fi
+  else
+    echo "Invalid parameter"
+  fi
+}
+
+# Create resources required for GCP Broker authentication setup.
+function gcp_broker_setup() {
+  echo "Authentication setup for GCP Broker"
+  local auth_mode=${1}
+
+  if [ "${auth_mode}" == "secret" ]; then
+    kubectl -n "${CONTROL_PLANE_NAMESPACE}" create secret generic "${GCP_BROKER_SECRET_NAME}" --from-file=key.json="${PUBSUB_SERVICE_ACCOUNT_KEY_TEMP}"
+  elif [ "${auth_mode}" == "workload_identity" ]; then
+    if (( ! IS_PROW )); then
+      gcloud iam service-accounts add-iam-policy-binding \
+        --role roles/iam.workloadIdentityUser \
+        --member "${BROKER_MEMBER}" "${PUBSUB_SERVICE_ACCOUNT_EMAIL}"
+    else
+      gcloud iam service-accounts add-iam-policy-binding \
+        --role roles/iam.workloadIdentityUser \
+        --member "${BROKER_MEMBER}" \
+        --project "${PROW_PROJECT_NAME}" "${PUBSUB_SERVICE_ACCOUNT_EMAIL}"
+    fi
+    kubectl annotate --overwrite serviceaccount ${BROKER_SERVICE_ACCOUNT} iam.gke.io/gcp-service-account="${PUBSUB_SERVICE_ACCOUNT_EMAIL}" \
+      --namespace "${CONTROL_PLANE_NAMESPACE}"
+  else
+    echo "Invalid parameter"
+  fi
+
+  warmup_broker_setup || true
+}
+
+function prow_control_plane_setup() {
+  local auth_mode=${1}
+
+  if [ "${auth_mode}" == "secret" ]; then
+    echo "Create the control plane secret"
+    kubectl -n "${CONTROL_PLANE_NAMESPACE}" create secret generic "${CONTROL_PLANE_SECRET_NAME}" --from-file=key.json="${CONTROL_PLANE_SERVICE_ACCOUNT_KEY_TEMP}"
+    echo "Delete the controller pod in the namespace '${CONTROL_PLANE_NAMESPACE}' to refresh the created/patched secret"
+    kubectl delete pod -n "${CONTROL_PLANE_NAMESPACE}" --selector role=controller
+  elif [ "${auth_mode}" == "workload_identity" ]; then
+    cleanup_iam_policy_binding_members
+    # Allow the Kubernetes service account to use Google service account.
+    gcloud iam service-accounts add-iam-policy-binding \
+      --role roles/iam.workloadIdentityUser \
+      --member "${MEMBER}" \
+      --project "${PROW_PROJECT_NAME}" "${CONTROL_PLANE_SERVICE_ACCOUNT_EMAIL}"
+    kubectl annotate --overwrite serviceaccount "${K8S_CONTROLLER_SERVICE_ACCOUNT}" iam.gke.io/gcp-service-account="${CONTROL_PLANE_SERVICE_ACCOUNT_EMAIL}" \
+      --namespace "${CONTROL_PLANE_NAMESPACE}"
+    # Setup default credential information for Workload Identity.
+    sed "s/K8S_SERVICE_ACCOUNT_NAME/${K8S_SERVICE_ACCOUNT_NAME}/g; s/PUBSUB-SERVICE-ACCOUNT/${DATA_PLANE_SERVICE_ACCOUNT_EMAIL}/g" ${CONFIG_GCP_AUTH} | ko apply -f -
+  else
+    echo "Invalid parameter"
+  fi
+}
+
+function cleanup_iam_policy_binding_members() {
+  # If the tests are run on Prow, clean up the member for roles/iam.workloadIdentityUser before running it.
+  members=$(gcloud iam service-accounts get-iam-policy \
+    --project="${PROW_PROJECT_NAME}" "${DATA_PLANE_SERVICE_ACCOUNT_EMAIL}" \
+    --format="value(bindings.members)" \
+    --filter="bindings.role:roles/iam.workloadIdentityUser" \
+    --flatten="bindings[].members")
+  while read -r member_name
+  do
+    # Only delete the iam bindings that is related to the current boskos project.
+    if [ "$(cut -d'.' -f1 <<< "${member_name}")" == "serviceAccount:${E2E_PROJECT_ID}" ]; then
+      gcloud iam service-accounts remove-iam-policy-binding \
+        --role roles/iam.workloadIdentityUser \
+        --member "${member_name}" \
+        --project "${PROW_PROJECT_NAME}" "${DATA_PLANE_SERVICE_ACCOUNT_EMAIL}"
+        # Add a sleep time between each get-set iam-policy-binding loop to avoid concurrency issue. Sleep time is based on the SLO.
+        sleep 10
+    fi
+  done <<< "$members"
+}
+
 function delete_topics_and_subscriptions() {
     subs=$(gcloud pubsub subscriptions list --format="value(name)")
     while read -r sub_name
     do
-      gcloud pubsub subscriptions delete "${sub_name}"
+      if [[ -n "${sub_name}" ]]; then
+        gcloud pubsub subscriptions delete "${sub_name}"
+      fi
     done <<<"$subs"
     topics=$(gcloud pubsub topics list --format="value(name)")
     while read -r topic_name
     do
-      gcloud pubsub topics delete "${topic_name}"
+      if [[ -n "${topic_name}" ]]; then
+        gcloud pubsub topics delete "${topic_name}"
+      fi
     done <<<"$topics"
 }
 
@@ -134,12 +240,12 @@ function dump_extra_cluster_state() {
       local current_output="${ARTIFACTS}/${controller_logs}/${namespace}-${pod}-${container}.txt"
       echo ">>> The dump of Namespace, Pod, Container: ${namespace}, ${pod}, ${container} is located at ${current_output}"
       echo "Namespace, Pod, Container: ${namespace}, ${pod}, ${container}"  >> "${current_output}"
-      kubectl logs -n $namespace "${pod}" -c "${container}" >> "${current_output}"
+      kubectl logs -n $namespace "${pod}" -c "${container}" >> "${current_output}" || true
       echo "----------------------------------------------------------"
       local previous_output="${ARTIFACTS}/${controller_logs}/previous-${namespace}-${pod}-${container}.txt"
       echo ">>> The dump of Namespace, Pod, Container (Previous instance): ${namespace}, ${pod}, ${container} is located at ${previous_output}"
       echo "Namespace, Pod, Container (Previous instance): ${namespace}, ${pod}, ${container}"  >> "${previous_output}"
-      kubectl logs -p -n $namespace "${pod}" -c "${container}" >> "${previous_output}"
+      kubectl logs -p -n $namespace "${pod}" -c "${container}" >> "${previous_output}" || true
       echo "============================================================"
     done
   done

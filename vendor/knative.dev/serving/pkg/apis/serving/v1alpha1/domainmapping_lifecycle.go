@@ -24,6 +24,8 @@ import (
 )
 
 var domainMappingCondSet = apis.NewLivingConditionSet(
+	DomainMappingConditionDomainClaimed,
+	DomainMappingConditionReferenceResolved,
 	DomainMappingConditionIngressReady,
 )
 
@@ -60,6 +62,38 @@ func (dms *DomainMappingStatus) InitializeConditions() {
 func (dms *DomainMappingStatus) MarkIngressNotConfigured() {
 	domainMappingCondSet.Manage(dms).MarkUnknown(DomainMappingConditionIngressReady,
 		"IngressNotConfigured", "Ingress has not yet been reconciled.")
+}
+
+// MarkDomainClaimed updates the DomainMappingConditionDomainClaimed condition
+// to indicate that the domain was successfully claimed.
+func (dms *DomainMappingStatus) MarkDomainClaimed() {
+	domainMappingCondSet.Manage(dms).MarkTrue(DomainMappingConditionDomainClaimed)
+}
+
+// MarkDomainClaimNotOwned updates the DomainMappingConditionDomainClaimed
+// condition to indicate that the domain is already in use by another
+// DomainMapping.
+func (dms *DomainMappingStatus) MarkDomainClaimNotOwned() {
+	domainMappingCondSet.Manage(dms).MarkFalse(DomainMappingConditionDomainClaimed, "DomainAlreadyClaimed",
+		"The domain name is already in use by another DomainMapping")
+}
+
+// MarkDomainClaimFailed updates the DomainMappingConditionDomainClaimed
+// condition to indicate that creating the ClusterDomainClaim failed.
+func (dms *DomainMappingStatus) MarkDomainClaimFailed(reason string) {
+	domainMappingCondSet.Manage(dms).MarkFalse(DomainMappingConditionDomainClaimed, "DomainClaimFailed", reason)
+}
+
+// MarkReferenceResolved sets the DomainMappingConditionReferenceResolved
+// condition to true.
+func (dms *DomainMappingStatus) MarkReferenceResolved() {
+	domainMappingCondSet.Manage(dms).MarkTrue(DomainMappingConditionReferenceResolved)
+}
+
+// MarkReferenceNotResolved sets the DomainMappingConditionReferenceResolved
+// condition to false.
+func (dms *DomainMappingStatus) MarkReferenceNotResolved(reason string) {
+	domainMappingCondSet.Manage(dms).MarkFalse(DomainMappingConditionReferenceResolved, "ResolveFailed", reason)
 }
 
 // PropagateIngressStatus updates the DomainMappingConditionIngressReady

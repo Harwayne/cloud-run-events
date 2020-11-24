@@ -1,6 +1,5 @@
 /*
  * Copyright 2020 The Knative Authors
- * Modified work Copyright 2020 Google LLC
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	"github.com/wavesoftware/go-ensure"
 	"go.uber.org/zap"
 	testlib "knative.dev/eventing/test/lib"
@@ -29,15 +27,14 @@ import (
 )
 
 var (
-	// FIXME: Interval is set to 200 msec, as lower values will result in errors: knative/eventing#2357
-	// Interval = 10 * time.Millisecond
-	Interval = 200 * time.Millisecond
+	// Interval is the event interval of the sender pod
+	Interval = 10 * time.Millisecond
 )
 
 // Prober is the interface for a prober, which checks the result of the probes when stopped.
 type Prober interface {
 	// Verify will verify prober state after finished has been send
-	Verify() ([]error, int)
+	Verify(ctx context.Context) ([]error, int)
 
 	// Finish send finished event
 	Finish(ctx context.Context)
@@ -49,37 +46,6 @@ type Prober interface {
 	deploy(ctx context.Context)
 	// remove a prober from cluster
 	remove()
-}
-
-// Config represents a configuration for prober
-type Config struct {
-	Namespace     string
-	Interval      time.Duration
-	Serving       ServingConfig
-	FinishedSleep time.Duration
-	FailOnErrors  bool
-}
-
-type ServingConfig struct {
-	Use         bool
-	ScaleToZero bool
-}
-
-func NewConfig(namespace string) *Config {
-	config := &Config{
-		Namespace:     "",
-		Interval:      Interval,
-		FinishedSleep: 5 * time.Second,
-		FailOnErrors:  true,
-		Serving: ServingConfig{
-			Use:         false,
-			ScaleToZero: true,
-		},
-	}
-	err := envconfig.Process("e2e_upgrade_tests", config)
-	ensure.NoError(err)
-	config.Namespace = namespace
-	return config
 }
 
 // RunEventProber starts a single Prober of the given domain.
@@ -95,7 +61,7 @@ func AssertEventProber(ctx context.Context, t *testing.T, prober Prober) {
 
 	waitAfterFinished(prober)
 
-	errors, events := prober.Verify()
+	errors, events := prober.Verify(ctx)
 	if len(errors) == 0 {
 		t.Logf("All %d events propagated well", events)
 	} else {

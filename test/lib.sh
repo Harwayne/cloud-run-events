@@ -40,7 +40,10 @@ function start_knative_gcp_monitoring() {
 # Install all required components for running knative-gcp.
 function start_knative_gcp() {
   start_latest_knative_serving || return 1
-  start_latest_knative_eventing || return 1
+  # Try reapply eventing yaml again if config-imc-event-dispatcher failed to start
+  # TODO: Restore the below line after https://github.com/knative/eventing/issues/3244 is fixed
+  #start_latest_knative_eventing || return 1
+  start_latest_knative_eventing || start_latest_knative_eventing || return 1
   start_knative_gcp_monitoring "$KNATIVE_GCP_MONITORING_YAML" || return 1
   cloud_run_events_setup $@ || return 1
   istio_patch || return 1
@@ -61,20 +64,6 @@ function cloud_run_events_setup() {
   fi
   ko apply --strict -f ${CLOUD_RUN_EVENTS_ISTIO_CONFIG}|| return 1
   wait_until_pods_running cloud-run-events || return 1
-}
-
-latest_version() {
-  # TODO: currently we don't have the right version tag in master,
-  # we should switch back to use the above logic instead in v0.19
-  # https://github.com/google/knative-gcp/issues/1857
-
-  #local semver=$(git describe --match "v[0-9]*" --abbrev=0)
-  #local major_minor=$(echo "$semver" | cut -d. -f1-2)
-
-  # Get the latest patch release for the major minor
-  #git tag -l "${major_minor}*" | sort -r --version-sort | head -n1
-
-  git tag | sort -r --version-sort | head -n1
 }
 
 # Latest release. If user does not supply this as a flag, the latest
