@@ -1,4 +1,4 @@
-# cloud.google.com/go v0.72.0
+# cloud.google.com/go v0.74.0
 ## explicit
 cloud.google.com/go
 cloud.google.com/go/cloudbuild/apiv1/v2
@@ -8,6 +8,7 @@ cloud.google.com/go/iam
 cloud.google.com/go/iam/admin/apiv1
 cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
+cloud.google.com/go/internal/pubsub
 cloud.google.com/go/internal/testutil
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
@@ -25,13 +26,19 @@ cloud.google.com/go/logging
 cloud.google.com/go/logging/apiv2
 cloud.google.com/go/logging/internal
 cloud.google.com/go/logging/logadmin
-# cloud.google.com/go/pubsub v1.8.0
+# cloud.google.com/go/pubsub v1.9.1
 ## explicit
 cloud.google.com/go/pubsub
 cloud.google.com/go/pubsub/apiv1
 cloud.google.com/go/pubsub/internal/distribution
 cloud.google.com/go/pubsub/internal/scheduler
 cloud.google.com/go/pubsub/pstest
+# cloud.google.com/go/pubsublite v0.5.0
+## explicit
+cloud.google.com/go/pubsublite
+cloud.google.com/go/pubsublite/apiv1
+cloud.google.com/go/pubsublite/internal/wire
+cloud.google.com/go/pubsublite/publish
 # cloud.google.com/go/storage v1.10.0
 ## explicit
 cloud.google.com/go/storage
@@ -200,11 +207,11 @@ github.com/google/mako/internal/go/common
 github.com/google/mako/internal/quickstore_microservice/proto/quickstore_go_proto
 github.com/google/mako/proto/quickstore/quickstore_go_proto
 github.com/google/mako/spec/proto/mako_go_proto
-# github.com/google/pprof v0.0.0-20201023163331-3e6fc7fc9c4c
+# github.com/google/pprof v0.0.0-20201203190320-1bf35d6f28c2
 github.com/google/pprof/profile
 # github.com/google/subcommands v1.0.1
 github.com/google/subcommands
-# github.com/google/uuid v1.1.2
+# github.com/google/uuid v1.1.4
 ## explicit
 github.com/google/uuid
 # github.com/google/wire v0.4.0
@@ -377,10 +384,10 @@ golang.org/x/crypto/openpgp/errors
 golang.org/x/crypto/openpgp/packet
 golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/lint v0.0.0-20200302205851-738671d3881b
+# golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/mod v0.3.0
+# golang.org/x/mod v0.4.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20201209123823-ac852fbbde11
@@ -418,9 +425,9 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
+# golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20201211185031-d93e913c1a58
+# golang.org/x/tools v0.0.0-20210105210202-9ed45478a130
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
@@ -476,7 +483,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20201211151036-40ec1c210f7a
+# google.golang.org/genproto v0.0.0-20210105202744-fe13368bc0e1
 ## explicit
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
@@ -487,6 +494,7 @@ google.golang.org/genproto/googleapis/api/metric
 google.golang.org/genproto/googleapis/api/monitoredres
 google.golang.org/genproto/googleapis/appengine/logging/v1
 google.golang.org/genproto/googleapis/cloud/audit
+google.golang.org/genproto/googleapis/cloud/pubsublite/v1
 google.golang.org/genproto/googleapis/cloud/scheduler/v1
 google.golang.org/genproto/googleapis/container/v1
 google.golang.org/genproto/googleapis/devtools/cloudbuild/v1

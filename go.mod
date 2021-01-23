@@ -3,16 +3,17 @@ module github.com/google/knative-gcp
 go 1.14
 
 require (
-	cloud.google.com/go v0.72.0
+	cloud.google.com/go v0.74.0
 	cloud.google.com/go/logging v1.0.1-0.20200331222814-69e77e66e597
-	cloud.google.com/go/pubsub v1.8.0
+	cloud.google.com/go/pubsub v1.9.1
+	cloud.google.com/go/pubsublite v0.5.0
 	cloud.google.com/go/storage v1.10.0
 	github.com/cloudevents/sdk-go/protocol/pubsub/v2 v2.2.1-0.20200806165906-9ae0708e27fa
 	github.com/cloudevents/sdk-go/v2 v2.3.1
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/protobuf v1.4.3
 	github.com/google/go-cmp v0.5.4
-	github.com/google/uuid v1.1.2
+	github.com/google/uuid v1.1.4
 	github.com/google/wire v0.4.0
 	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -25,7 +26,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20201208152858-08078c50e5b5
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	google.golang.org/api v0.36.0
-	google.golang.org/genproto v0.0.0-20201211151036-40ec1c210f7a
+	google.golang.org/genproto v0.0.0-20210105202744-fe13368bc0e1
 	google.golang.org/grpc v1.34.0
 	google.golang.org/protobuf v1.25.0
 	k8s.io/api v0.19.7
