@@ -30,27 +30,39 @@ import (
 func (b *Broker) SetDefaults(ctx context.Context) {
 	// Apply the default Broker delivery settings from the context.
 	withNS := apis.WithinParent(ctx, b.ObjectMeta)
-	deliverySpecDefaults := brokerdelivery.FromContextOrDefaults(withNS).BrokerDeliverySpecDefaults
+	b.Spec.Delivery = GetDefaultDeliverySpec(withNS, b.Spec.Delivery)
+}
+
+// GetDefaultDeliverySpec returns the default DeliverySpec. It will take in the existing
+// DeliverySpec and returns a defaulted version. Note that you need to use the returned value, you
+// cannot rely on mutation of the passed in value.
+// The passed in context must have set `aps.WithinParent`.
+func GetDefaultDeliverySpec(ctx context.Context, deliverySpec *eventingduckv1beta1.DeliverySpec) *eventingduckv1beta1.DeliverySpec {
+	deliverySpecDefaults := brokerdelivery.FromContextOrDefaults(ctx).BrokerDeliverySpecDefaults
 	if deliverySpecDefaults == nil {
+		// TODO This should probably either fail closed or give some sane in-code default values.
+		// As-is, this will just let undefaulted things into the system, which may cause issues like
+		// nil pointer dereferences later in the system.
 		logging.FromContext(ctx).Error("Failed to get the BrokerDeliverySpecDefaults")
-		return
+		return deliverySpec
 	}
 	// Set the default delivery spec.
-	if b.Spec.Delivery == nil {
-		b.Spec.Delivery = &eventingduckv1beta1.DeliverySpec{}
+	if deliverySpec == nil {
+		deliverySpec = &eventingduckv1beta1.DeliverySpec{}
 	}
-	ns := apis.ParentMeta(withNS).Namespace
-	if b.Spec.Delivery.BackoffPolicy == nil || b.Spec.Delivery.BackoffDelay == nil {
+	ns := apis.ParentMeta(ctx).Namespace
+	if deliverySpec.BackoffPolicy == nil || deliverySpec.BackoffDelay == nil {
 		// Set both defaults if one of the backoff delay or backoff policy are not specified.
-		b.Spec.Delivery.BackoffPolicy = deliverySpecDefaults.BackoffPolicy(ns)
-		b.Spec.Delivery.BackoffDelay = deliverySpecDefaults.BackoffDelay(ns)
+		deliverySpec.BackoffPolicy = deliverySpecDefaults.BackoffPolicy(ns)
+		deliverySpec.BackoffDelay = deliverySpecDefaults.BackoffDelay(ns)
 	}
-	if b.Spec.Delivery.DeadLetterSink == nil {
-		b.Spec.Delivery.DeadLetterSink = deliverySpecDefaults.DeadLetterSink(ns)
+	if deliverySpec.DeadLetterSink == nil {
+		deliverySpec.DeadLetterSink = deliverySpecDefaults.DeadLetterSink(ns)
 	}
-	if b.Spec.Delivery.Retry == nil && b.Spec.Delivery.DeadLetterSink != nil {
+	if deliverySpec.Retry == nil && deliverySpec.DeadLetterSink != nil {
 		// Only set the retry count if a dead letter sink is specified.
-		b.Spec.Delivery.Retry = deliverySpecDefaults.Retry(ns)
+		deliverySpec.Retry = deliverySpecDefaults.Retry(ns)
 	}
 	// Besides this, the eventing webhook will add the usual defaults.
+	return deliverySpec
 }

@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	brokerv1beta1 "github.com/google/knative-gcp/pkg/apis/broker/v1beta1"
+
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/google/go-cmp/cmp"
@@ -28,13 +30,14 @@ import (
 )
 
 func (c *Channel) Validate(ctx context.Context) *apis.FieldError {
-	err := c.Spec.Validate(ctx).ViaField("spec")
+	withNS := apis.AllowDifferentNamespace(apis.WithinParent(ctx, c.ObjectMeta))
+	errs := c.Spec.Validate(withNS).ViaField("spec")
 
-	if apis.IsInUpdate(ctx) {
-		original := apis.GetBaseline(ctx).(*Channel)
-		err = err.Also(c.CheckImmutableFields(ctx, original))
+	if apis.IsInUpdate(withNS) {
+		original := apis.GetBaseline(withNS).(*Channel)
+		errs = errs.Also(c.CheckImmutableFields(withNS, original))
 	}
-	return err
+	return errs
 }
 
 func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
@@ -46,6 +49,9 @@ func (cs *ChannelSpec) Validate(ctx context.Context) *apis.FieldError {
 				fe := apis.ErrMissingField("replyURI", "subscriberURI")
 				fe.Details = "expected at least one of, got none"
 				errs = errs.Also(fe.ViaField(fmt.Sprintf("subscriber[%d]", i)).ViaField("subscribable"))
+			}
+			if subscriber.Delivery != nil {
+				errs = errs.Also(brokerv1beta1.ValidateDeliverySpec(ctx, subscriber.Delivery).ViaField("spec", "delivery"))
 			}
 		}
 	}

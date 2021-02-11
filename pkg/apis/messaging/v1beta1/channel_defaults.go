@@ -19,6 +19,8 @@ package v1beta1
 import (
 	"context"
 
+	brokerv1beta1 "github.com/google/knative-gcp/pkg/apis/broker/v1beta1"
+
 	"knative.dev/pkg/apis"
 
 	"github.com/google/knative-gcp/pkg/apis/messaging/internal"
@@ -43,7 +45,13 @@ func (c *Channel) SetDefaults(ctx context.Context) {
 	if _, present := c.Annotations[messaging.SubscribableDuckVersionAnnotation]; !present {
 		c.Annotations[messaging.SubscribableDuckVersionAnnotation] = internal.StoredChannelVersion
 	}
-	c.Spec.SetDefaults(ctx)
+	c.Spec.SetDefaults(apis.WithinParent(ctx, c.ObjectMeta))
 }
 
-func (cs *ChannelSpec) SetDefaults(_ context.Context) {}
+func (cs *ChannelSpec) SetDefaults(ctx context.Context) {
+	if cs.SubscribableSpec != nil {
+		for i, s := range cs.SubscribableSpec.Subscribers {
+			cs.SubscribableSpec.Subscribers[i].Delivery = brokerv1beta1.GetDefaultDeliverySpec(ctx, s.Delivery)
+		}
+	}
+}
